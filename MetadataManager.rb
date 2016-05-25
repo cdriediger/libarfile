@@ -1,4 +1,4 @@
-require './elif.rb'
+require 'elif'
 
 class MetadataManager < Hash
 
@@ -311,9 +311,9 @@ class MetadataManager < Hash
                       'Start' => @metadata_start_pos,
                       'Stop' => @metadata_stop_pos}.to_msgpack
       superblock.insert(0, %Q< \n>)
-      $Log.debug("MM: MetadataMetadata: #{superblock}")
+      $Log.debug("MM: Superblock: #{superblock}")
       archive.write_part(superblock, debup = false, is_superblock = true)
-      $Log.debug("MM: Wrote MetadataMetadata at End of Archive")
+      $Log.debug("MM: Wrote Superblock at End of Archive")
     end
   end
 
@@ -452,14 +452,16 @@ class MetadataManager < Hash
   end
 
   def parse_superblock
-    $Log.debug('MM: PARSE METADATA METADATA')
-    $Log.debug('   Parsing MetadataMetadata..')
+    $Log.debug('MM: PARSE SUPERBLOCK')
+    $Log.debug('   Parsing Superblock..')
     begin
       metadatafileobj = Elif.open(@archivefilename)
     rescue Errno::ENOENT
       return false
     end
     superblock_msp = metadatafileobj.readline
+    $Log.debug('   Found Superblock')
+    $Log.debug(superblock_msp)
     superblock = MessagePack.unpack(superblock_msp)
     return superblock
   end

@@ -41,7 +41,9 @@ class ArchiveManager
     end
     fd = IO.sysopen(@path, 'r+')
     @filehandle = IO.new(fd, 'r+')
-    @filehandle.binmode
+    if not Gem.win_platform?
+      @filehandle.binmode
+    end
     @tmpfiles = []
     if @metadata.metadata_start_pos
       @metadata.set_end_of_archive(@metadata.metadata_start_pos)

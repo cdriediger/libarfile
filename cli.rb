@@ -116,7 +116,6 @@ jobs.each do |job|
   #puts '--------------------'
   #puts options
   #puts '--------------------'
-  #jobarguments.each {|argument| puts argument.class}
   if jobname == 'add_file'
     file_id = archive.add(jobarguments[0], enable_dedup = true)
     unless options[:container_name].nil?
