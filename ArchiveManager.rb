@@ -41,7 +41,7 @@ class ArchiveManager
     end
     fd = IO.sysopen(@path, 'r+')
     @filehandle = IO.new(fd, 'r+')
-    if not Gem.win_platform?
+    if Gem.win_platform?
       @filehandle.binmode
     end
     @tmpfiles = []
