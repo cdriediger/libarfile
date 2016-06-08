@@ -27,7 +27,6 @@ class ArchiveManager
   def initialize(path, metadata)
     @path = path
     @metadata = metadata
-    @chunks = @metadata.chunks
     @filemanager = FileManager.new(@path)
     @filemanager.enable_write
     if @metadata.metadata_start_pos
@@ -81,13 +80,13 @@ class ArchiveManager
           return chunk_id
         else
           $Log.debug('   Found NO Part with same part_id')
-          chunk_id, chunk_start, chunk_size = @chunks.get_chunk(data.length)
+          chunk_id, chunk_start, chunk_size = @metadata.chunks.get_chunk(data.length)
           @metadata.set_part_hash(chunk_id, part_hash)
           $Log.debug("   write_part returns chunk_id: #{chunk_id}")
         end
       else
         $Log.debug('   Disabled Dublication')
-        chunk_id, chunk_start, chunk_size = @chunks.get_chunk(data.length)
+        chunk_id, chunk_start, chunk_size = @metadata.chunks.get_chunk(data.length)
         $Log.debug("   write_part returns chunk_id: #{chunk_id}, start: #{chunk_start}, length: chunk_length")
       end
     end
@@ -123,7 +122,7 @@ class ArchiveManager
     start, length = @metadata.chunks.get_chunk_by_id(chunk_id)
     overwrite(start, length)
     unless do_not_return_chunk
-      @chunks.return_chunk(chunk_id)
+      @metadata.chunks.return_chunk(chunk_id)
     end
   end
 
