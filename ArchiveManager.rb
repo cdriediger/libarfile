@@ -6,18 +6,14 @@ end
 
 module Compressor
 
-  #require 'lzma'
+  require 'lzma'
 
   def self.compress(data)
-    #return LZMA.compress(data)
-    #return Zlib::Deflate.deflate(data)
-    return data
+    return LZMA.compress(data)
   end
 
   def self.restore(comp_data)
-    #LZMA.decompress(comp_data)
-    #return Zlib::Deflate.deflate(comp_data)
-    return comp_data
+    LZMA.decompress(comp_data)
   end
 
 end
