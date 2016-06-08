@@ -23,24 +23,13 @@ class ArchiveManager
   attr_reader :chunksize
   attr_reader :ReadPos
   attr_reader :end_of_archive
-  attr_reader :max_chunk_size
 
   def initialize(path, metadata)
-    @closed = false
     @path = path
     @metadata = metadata
-    @readpos = 0
     @chunks = @metadata.chunks
-    @max_chunk_size = 10**5 #2**12
-    unless File.exist?(@path)
-      File.open(@path, 'w').close
-    end
-    fd = IO.sysopen(@path, 'r+')
-    @filehandle = IO.new(fd, 'r+')
-    if Gem.win_platform?
-      @filehandle.binmode
-    end
-    @tmpfiles = []
+    @filemanager = FileManager.new(@path)
+    @filemanager.enable_write
     if @metadata.metadata_start_pos
       @metadata.set_end_of_archive(@metadata.metadata_start_pos)
     else
@@ -49,23 +38,7 @@ class ArchiveManager
   end
 
   def close
-    @closed = true
-    @filehandle.close
-  end
-
-  def get_end_of_file
-    last_file_post = @filehandle.tell
-    @filehandle.seek(0, IO::SEEK_END)
-    end_of_file = @filehandle.tell
-    @filehandle.seek(last_file_post)
-    return end_of_file
-  end
-
-  def reopen
-    fd = IO.sysopen(@path, 'r+')
-    @filehandle = IO.new(fd)
-    @filehandle.binmode
-    @closed = false
+    @filemanager.close
   end
 
   def normalize_path(path)
@@ -93,7 +66,7 @@ class ArchiveManager
     $Log.debug('AM: WRITE PART')
     if is_superblock
       $Log.debug('   Data is Superblock')
-      chunk_start = get_end_of_file
+      chunk_start = @filemanager.get_end_of_file
     else
       data = Compressor::compress(data)
       if dedup
@@ -119,26 +92,24 @@ class ArchiveManager
       end
     end
     $Log.debug("   Start writing #{data.length} bytes at: #{chunk_start}")
-    @filehandle.seek(chunk_start)
-    length = @filehandle.write(data)
+    length = @filemanager.write(data, chunk_start)
     $Log.debug("   Wrote #{length} bytes")
-    if chunk_start + data.length != @filehandle.tell
+    if chunk_start + data.length != @filemanager.get_position
       $Log.error("ERROR\n##########")
       $Log.error(data)
       $Log.error("------------")
       $Log.error(data.length)
       $Log.error("############")
-      debugfile = File.new(@path + '.debugdata', 'w')
-      debugfile.write(data)
+      debugfile = FileManager.new(@path + '.debugdata', 'w')
+      debugfile.write(data, 0)
       debugfile.close
       $Log.error("Calculated Data Length: #{data.length}")
-      $Log.error("Real Data Length: #{@filehandle.tell - chunk_start}")
-      $Log.fatal_error("   Calculated #{chunk_start + data.length} and real #{@filehandle.tell} endpoint do not match")
+      $Log.error("Real Data Length: #{@filemanager.get_position - chunk_start}")
+      $Log.fatal_error("   Calculated #{chunk_start + data.length} and real #{@filemanager.get_position} endpoint do not match")
     end
     if length != chunk_size and not is_superblock
       $Log.fatal_error("   Cunk size #{chunk_size} does not fit with length #{length} of Data written!!")
     end
-    #@filehandle.flush
     if is_superblock
       return
     else
@@ -162,17 +133,13 @@ class ArchiveManager
     $Log.debug('Overwriting following Data:')
     $Log.debug(read(length, start))
     $Log.debug('#################')
-    @filehandle.seek(start)
     $Log.debug("Data length: #{get_bytes(length, "+").length}")
-    @filehandle.write(get_bytes(length, "+"))
+    @filemanager.write(get_bytes(length, "+"), start)
   end
 
-  def read(length, start=@readpos)
+  def read(length, start=nil)
     $Log.debug('AM: READ')
-    @filehandle.seek(start)
-    data = @filehandle.read(length)
-    @readpos = @filehandle.tell
-    return data
+    return @filemanager.read(length, start)
   end
 
   def read_chunk(chunk_id)
@@ -184,7 +151,7 @@ class ArchiveManager
   end
 
   def closed?
-    return @closed
+    return @filemanager.closed?
   end
 
   def size
@@ -199,10 +166,7 @@ class ArchiveManager
   end
 
   def rename(new_path)
-    close
-    File.rename(@path, new_path)
-    @path = new_path
-    reopen
+    @filemanager.rename(new_path)
   end
 
 end

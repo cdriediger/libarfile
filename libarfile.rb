@@ -11,6 +11,7 @@ require './logger.rb'
 require './ChunkManager2.rb'
 require './MetadataManager.rb'
 require './ArchiveManager.rb'
+require './FileManager.rb'
 
 class Integer
 
@@ -122,7 +123,7 @@ class ArFile
     if file.is_a?(String)
       path = File.absolute_path(file)
       if File.exist?(path)
-        fileobj = File.open(path)
+        fileobj = FileManager.new(path)
         $Log.info(" Filename: #{path}")
         if File.size?(path)
           $Log.info(" Filesize: #{File.size?(path).to_filesize}")
@@ -152,24 +153,22 @@ class ArFile
     end
     calculate_part_hashes if enable_dedup and not @calculated_part_hashes
     @metadata.enable_edit
-    hash = Digest::MD5.hexdigest(fileobj.read)
-    fileobj.seek(0)
-    if @metadata['FileHashes'].keys.include?(hash)
-      $Log.error("    File already in Archive. ID: #{@metadata['FileHashes'][hash]}")
+    if @metadata['FileHashes'].keys.include?(fileobj.hash)
+      $Log.error("    File already in Archive. ID: #{@metadata['FileHashes'][fileobj.hash]}")
       fileobj.close
-      return @metadata['FileHashes'][hash]
+      return @metadata['FileHashes'][fileobj.hash]
     end
-    file_id = @metadata.new_file(fileobj.path[1..-1], 'zlib', hash, enable_dedup)
+    file_id = @metadata.new_file(fileobj.path[1..-1], 'zlib', fileobj.hash, enable_dedup)
     part_id = 0
     enable_dedup = false
     if enable_dedup
-      fileobj.readlines.each do |line|
-        chunk_id = @archive.write_part(line, dedup = true)
+      until fileobj.eof?
+        chunk_id = @archive.write_part(fileobj.read(16384), dedup = true)  
         @metadata.new_part(file_id, part_id, chunk_id)
         part_id += 1
       end
     else
-      chunk_id = @archive.write_part(fileobj.read, dedup = false)
+      chunk_id = @archive.write_part(fileobj.read_all, dedup = false)
       @metadata.new_part(file_id, part_id, chunk_id)
     end
     fileobj.close
@@ -228,6 +227,7 @@ class ArFile
     @metadata.delete_file(id)
     @metadata.commit
     $Log.info('Finished deleting File')
+    return true
   end
 
   def extract(id, dest=nil)
@@ -242,7 +242,8 @@ class ArFile
       if dest == '/'
         dest_folder = '/'
       elsif File.directory?(dest_folder)
-        fileobj = File.open(File.absolute_path(dest), 'w')
+        fileobj = FileManager.new(File.absolute_path(dest))
+        fileobj.enable_write
       else
         $Log.error("    No such Directory: #{dest_folder}")
         return false
@@ -263,7 +264,7 @@ class ArFile
     parts.values.each do |chunk_id|
       $Log.debug("    Reading Chunk: #{chunk_id}")
       data = @archive.read_chunk(chunk_id)
-      fileobj.write(data)
+      fileobj.write(data, 0)
     end
     fileobj.close
     $Log.info('Finished extracting')
