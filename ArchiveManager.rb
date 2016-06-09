@@ -29,8 +29,8 @@ class ArchiveManager
     @metadata = metadata
     @filemanager = FileManager.new(@path)
     @filemanager.enable_write
-    if @metadata.metadata_start_pos
-      @metadata.set_end_of_archive(@metadata.metadata_start_pos)
+    if @metadata.superblock.found?
+      @metadata.set_end_of_archive(@filemanager.get_end_of_file - @metadata.superblock.length)
     else
       @metadata.set_end_of_archive(0)
     end

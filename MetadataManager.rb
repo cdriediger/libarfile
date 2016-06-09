@@ -2,10 +2,47 @@ require 'elif'
 
 class MetadataManager < Hash
 
-  attr_accessor :metadata_start_pos
-  attr_accessor :metadata_stop_pos
   attr_accessor :writable_data
   attr_accessor :chunks
+  attr_accessor :superblock
+
+  class Superblock < Hash
+
+    attr_reader :length
+
+    def initialize(path)
+      $Log.debug('S: PARSE superblock')
+      @found = false
+      @length = 0
+      begin
+        fileobj = Elif.open(path)
+      rescue Errno::ENOENT
+        return false
+      end
+      begin
+        superblock_msp = fileobj.readline
+      rescue EOFError
+        return false
+      end
+      $Log.debug('   Found potential Superblock')
+      $Log.debug(superblock_msp)
+      begin
+        @superblock = MessagePack.unpack(superblock_msp)
+        self.merge!(@superblock)
+        @found = true
+        @length = superblock_msp.length$
+      rescue MessagePack::MalformedFormatError
+        return false
+      end
+      $Log.debug('   Found Superblock')
+      $Log.debug(@superblock)
+    end
+
+    def found?
+      return @found
+    end
+
+  end
 
   def initialize(path)
     $Log.info('Initializing MetadataManager')
@@ -13,8 +50,6 @@ class MetadataManager < Hash
     @archivefilename = @path
     @backupfilename = path + '.backup'
     @backupfile = nil
-    @metadata_start_pos = nil
-    @metadata_stop_pos = nil
     @superblock_start_pos = nil
     @superblock_stop_pos = nil
     @empty_chunks = []
@@ -23,24 +58,19 @@ class MetadataManager < Hash
     @archive = nil
     @initial_metadata_is_overwritten = false
     @found_init_metadata = false
-    @found_init_superblock = false
     if File.exist?(@backupfilename)
       $Log.debug('   Found Metadata Backup')
       self.merge!(restore_metadata_backup)
       commit
     else
-      superblock = parse_superblock
-      if superblock
-        $Log.debug('   Found superblock')
-        $Log.debug(superblock)
-        @metadata_start_pos = superblock['Start']
-        @metadata_stop_pos = superblock['Stop']
-      end
-      parsed_metadata = parse_metadata
-      if parsed_metadata
-        $Log.debug('   Found Metadata')
-        self.merge!(parsed_metadata)
-        $Log.debug(self['Chunks'])
+      @superblock = Superblock.new(@path)
+      if @superblock.found?
+        parsed_metadata = parse_metadata(@superblock)
+        if parsed_metadata
+          $Log.debug('   Found Metadata')
+          self.merge!(parsed_metadata)
+          $Log.debug(self['Chunks'])
+        end
       end
     end
     if self.empty?
@@ -60,8 +90,7 @@ class MetadataManager < Hash
     self['last_chunk_id'] = 0 unless self.has_key?('last_chunk_id')
     @final_metadata = self.clone
     @chunks = ChunkManager.new(self)
-    @chunks.set_metadata_chunk(@metadata_start_pos, @metadata_stop_pos) if @found_init_metadata
-    @chunks.set_metadata_chunk(@superblock_start_pos, @superblock_stop_pos) if @found_init_superblock
+    @chunks.set_metadata_chunk(@superblock['Start'], superblock['Stop']) if @superblock.found?
   end
 
   def new?
@@ -305,15 +334,14 @@ class MetadataManager < Hash
       chunk_id = archive.write_part(metadata_final, debup = false)
       $Log.debug("MM: Wrote Metadata at Chunk #{chunk_id}")
       start, size = @chunks.get_chunk_by_id(chunk_id)
-      @metadata_start_pos = start
-      @metadata_stop_pos = start + size
-      superblock = {'Hash' => metadata_hash,
-                      'Start' => @metadata_start_pos,
-                      'Stop' => @metadata_stop_pos}.to_msgpack
-      superblock.insert(0, %Q< \n>)
-      $Log.debug("MM: Superblock: #{superblock}")
-      archive.write_part(superblock, debup = false, is_superblock = true)
-      $Log.debug("MM: Wrote Superblock at End of Archive")
+      length = start + size
+      @superblock = {'Hash' => metadata_hash,
+                      'Start' => start,
+                      'Stop' => length}.to_msgpack
+      @superblock.insert(0, %Q< \n>)
+      $Log.debug("MM: @superblock: #{superblock}")
+      archive.write_part(@superblock, debup = false, is_superblock = true)
+      $Log.debug("MM: Wrote @superblock at End of Archive")
     end
   end
 
@@ -396,7 +424,7 @@ class MetadataManager < Hash
     return metadata
   end
 
-  def parse_metadata
+  def parse_metadata(superblock)
     $Log.debug('MM: PARSE METADATA NEW')
     $Log.debug('   Parsing Metadata..')
     begin
@@ -404,8 +432,8 @@ class MetadataManager < Hash
     rescue Errno::ENOENT
       return false
     end
-    metadatafileobj.seek(@metadata_start_pos)
-    metadata_length = @metadata_stop_pos - @metadata_start_pos
+    metadatafileobj.seek(@superblock['Start'])
+    metadata_length = @superblock['Stop'] - superblock['Start']
     metadata_msp = Compressor.restore(metadatafileobj.read(metadata_length))
     metadata = MessagePack.unpack(metadata_msp)
     $Log.debug(metadata)
@@ -452,32 +480,36 @@ class MetadataManager < Hash
   end
 
   def parse_superblock
-    $Log.debug('MM: PARSE SUPERBLOCK')
-    $Log.debug('   Parsing Superblock..')
+    $Log.debug('MM: PARSE @superblock')
+    $Log.debug('   Parsing @superblock..')
     begin
       metadatafileobj = Elif.open(@archivefilename)
     rescue Errno::ENOENT
       return false
     end
-    superblock_msp = metadatafileobj.readline
-    $Log.debug('   Found Superblock')
-    $Log.debug(superblock_msp)
-    superblock = MessagePack.unpack(superblock_msp)
-    return superblock
+    @superblock_msp = metadatafileobj.readline
+    $Log.debug('   Found potential @superblock')
+    $Log.debug(@superblock_msp)
+    begin
+      @superblock = MessagePack.unpack(superblock_msp)
+    rescue MessagePack::MalformedFormatError
+      return false
+    end
+    $Log.debug('   Found @superblock')
+    $Log.debug(@superblock)
+    return @superblock
   end
 
   def overwrite_initial_metadata(archive = @archive)
     $Log.debug('MM: OVERWRITE INITIAL METADATA')
-    if not @initial_metadata_is_overwritten and archive and @found_init_metadata
-      if @metadata_start_pos and @metadata_stop_pos
-        start = @metadata_start_pos
-        length = (@metadata_stop_pos - start) + 18
-        $Log.debug("   Overwriting Initial Metadata: Start: #{start}, length: #{length}")
-        archive.overwrite(start, length)
-        @initial_metadata_is_overwritten = true
-      else
-        $Log.debug('   No initial Metadata')
-      end
+    if not @initial_metadata_is_overwritten and archive and @superblock.found?
+      start = @superblock['Start']
+      length = (@superblock['Stop'] - start) + 18
+      $Log.debug("   Overwriting Initial Metadata: Start: #{start}, length: #{length}")
+      archive.overwrite(start, length)
+      @initial_metadata_is_overwritten = true
+    else
+      $Log.debug('   No initial Metadata')
     end
   end
 
