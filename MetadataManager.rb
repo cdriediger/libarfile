@@ -30,7 +30,7 @@ class MetadataManager < Hash
         @superblock = MessagePack.unpack(superblock_msp)
         self.merge!(@superblock)
         @found = true
-        @length = superblock_msp.length$
+        @length = superblock_msp.length
       rescue MessagePack::MalformedFormatError
         return false
       end
@@ -189,7 +189,6 @@ class MetadataManager < Hash
   end
 
   def get_next_file_id
-    #return (self['Files'].keys.sort[-1].to_i + 1).to_s
     return Usid.usid
   end
 

@@ -70,8 +70,10 @@ class FileManager
     return @filehandle.eof?
   end
 
-  def write(data, start)
-    @filehandle.seek(start)
+  def write(data, start=nil)
+    if start
+      @filehandle.seek(start)
+    end
     length = @filehandle.write(data)
     $Log.debug("FM: WROTE #{length} Bytes to #{path}")
     return length
