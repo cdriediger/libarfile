@@ -1,16 +1,43 @@
+require 'digest'
+
 class FileManager
 
   attr_reader :path
 
+  class LittleLogger
+
+    def info(msg)
+      puts("INFO: #{msg}")
+    end
+
+    def error(msg)
+      puts("ERROR: #{msg}")
+    end
+
+    def fatal_error(msg)
+      puts("FATAL_ERROR: #{msg}")
+    end
+
+    def debug(msg)
+      puts("DEBUG: #{msg}")
+    end
+
+  end
+
+  class FileManagerError < IOError
+  end
+
   def initialize(path)
+    $Log = LittleLogger.new unless $Log
     $Log.debug("FM: INIT FILEMANAGER #{path}")
     @path = path
     @readpos = 0
-    @hash = nil
     @mode = 'r'
     unless File.exist?(@path)
+      $Log.debug("FM: FILE DOES NOT EXIST. CREATING IT.")
       File.open(@path, 'w').close
     end
+    @closed = true
     open
   end
 
@@ -71,6 +98,7 @@ class FileManager
   end
 
   def write(data, start=nil)
+    raise FileManagerError, 'Not in write mode' if @mode == 'r'
     if start
       @filehandle.seek(start)
     end
@@ -98,12 +126,16 @@ class FileManager
 
   def hash
     $Log.debug("FM: GET HASH OF FILE #{path}")
-    return @hash if @hash
     cur_pos = @filehandle.tell
     @filehandle.seek(0)
-    @hash = Digest::MD5.hexdigest(@filehandle.read)
+    hash = Digest::MD5.hexdigest(@filehandle.read)
     @filehandle.seek(cur_pos)
-    return @hash
+    return hash
   end
+
+  def size?
+    @filehandle.fsync    
+    return File.size?(@path)
+  end    
 
 end
