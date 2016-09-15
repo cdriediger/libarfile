@@ -156,8 +156,11 @@ jobs.each do |job|
     end
   elsif jobname == 'extract'
     if options[:file_id].nil?
-      puts "--file FILE_ID missing"
-      raise OptionParser::MissingArgument
+      archive.list.each do |file_id, file_data|
+        dest_path = File.absolute_path(jobarguments[0]) + "/" + file_data['Path']
+        system('mkdir', '-p', File.dirname(dest_path))
+        archive.extract(file_id, dest_path)
+      end
     else
       archive.extract(options[:file_id], jobarguments[0])
     end

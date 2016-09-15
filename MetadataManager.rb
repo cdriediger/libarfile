@@ -44,9 +44,10 @@ class MetadataManager < Hash
 
   end
 
-  def initialize(path)
+  def initialize(path, read_only=true)
     $Log.info('Initializing MetadataManager')
     @path = path
+    @read_only = read_only
     @archivefilename = @path
     @backupfilename = path + '.backup'
     @backupfile = nil
@@ -317,6 +318,7 @@ class MetadataManager < Hash
   end
 
   def write_to_file(archive = @archive)
+    return if @read_only
     $Log.debug('MM: WRITE TO FILE NEW')
     $Log.debug("   Appending Metadata to #{@path}")
     metadata = get_writable_data
@@ -345,6 +347,7 @@ class MetadataManager < Hash
   end
 
   def write_backup(function_name, object_id)
+    return if @read_only
     $Log.debug('MM: WRITE METADATA BACKUP')
     $Log.debug("function_name: #{function_name}, object_id: #{object_id}")
     metadata = self.clone
@@ -440,6 +443,7 @@ class MetadataManager < Hash
   end
 
   def overwrite_in_archive(archive = @archive)
+    return if @read_only
     $Log.debug('MM: OVERWRITE IN ARCHIVE')
     unless self.chunks.metadataChunks.empty?
       self.chunks.metadataChunks.each do |chunk_id|

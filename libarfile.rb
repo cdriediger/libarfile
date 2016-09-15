@@ -146,24 +146,32 @@ class ArFile
       enable_dedup = false
       $Log.info('    Disabled Dedublication. File is to big')
     end
-    $Log.info("Is_ASCII: #{is_ascii(path)}")
-    if not is_ascii(path) and enable_dedup
+    $Log.info("is_ascii?: #{is_ascii?(path)}")
+    if not is_ascii?(path) and enable_dedup
       enable_dedup = false
       $Log.info('    Disabled Dedublication. File is not ASCII')
     end
     calculate_part_hashes if enable_dedup and not @calculated_part_hashes
     @metadata.enable_edit
     if @metadata['FileHashes'].keys.include?(fileobj.hash)
-      $Log.error("    File already in Archive. ID: #{@metadata['FileHashes'][fileobj.hash]}")
-      fileobj.close
-      return @metadata['FileHashes'][fileobj.hash]
+      hash = fileobj.hash
+      existing_file_id = @metadata['FileHashes'][hash]
+      $Log.error("    File already in Archive. ID: #{existing_file_id}")
+      if fileobj.path[1..-1] == @metadata['Files'][existing_file_id]['Path']
+        fileobj.close
+        return @metadata['FileHashes'][hash]
+      else
+        file_id = @metadata.new_file(fileobj.path[1..-1], 'zlib', fileobj.hash, enable_dedup)
+        @metadata['Files'][file_id]['Parts'] = @metadata['Files'][@metadata['FileHashes'][hash]]['Parts']
+        return file_id
+      end
     end
     file_id = @metadata.new_file(fileobj.path[1..-1], 'zlib', fileobj.hash, enable_dedup)
     part_id = 0
     enable_dedup = false
     if enable_dedup
       until fileobj.eof?
-        chunk_id = @archive.write_part(fileobj.read(16384), dedup = true)  
+        chunk_id = @archive.write_part(fileobj.read(16384), dedup = true)
         @metadata.new_part(file_id, part_id, chunk_id)
         part_id += 1
       end
@@ -424,7 +432,7 @@ class ArFile
     @calculated_part_hashes = true
   end
 
-  def is_ascii(filepath)
+  def is_ascii?(filepath)
     file_type = filepath.split('.')[-1]
     file_type_whitelist = ['sql']
     return true if file_type_whitelist.include?(file_type)
