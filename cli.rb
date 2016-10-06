@@ -4,25 +4,24 @@ require './libarfile.rb'
 require 'optparse'
 
 def list_files(path)
-    files = []
-    files_count = 0
-    entries = Dir.entries(path)
-    entries.delete(".")
-    entries.delete("..")
-    for entry in entries
-        filepath = path + "/" + entry
-        if File.file?(filepath)
-            filepath.gsub!('//', '/')
-            puts(filepath)
-            files << filepath
-            files_count += 1
-        elsif File.directory?(filepath)
-            tmp_filelist, tmp_filescount = list_files(filepath)
-            files.concat(tmp_filelist)
-            files_count += tmp_filescount
-        end
+  files = []
+  files_count = 0
+  entries = Dir.entries(path)
+  entries.delete(".")
+  entries.delete("..")
+  for entry in entries
+    filepath = path + "/" + entry
+    filepath.gsub!('//', '/')
+    puts(filepath)
+    files << filepath
+    files_count += 1
+    if File.directory?(filepath)
+      tmp_filelist, tmp_filescount = list_files(filepath)
+      files.concat(tmp_filelist)
+      files_count += tmp_filescount
     end
-    return files, files_count
+  end
+  return files, files_count
 end
 
 options = {}
@@ -36,13 +35,13 @@ optparse = OptionParser.new do |opts|
     jobs << ['add_file', file_path]
   end
   opts.on('--add-folder FOLDER_PATH', 'Add File') do |folder_path|
-    jobs << ['add_folder', folder_path]
+    jobs << ['add_folder', File.absolute_path(folder_path)]
   end
-  opts.on('-d', '--delete-file', 'Delete File') do
+  opts.on('-d', '--delete-file', 'Delete File. Requires --file or --files or --container') do
     jobs << ['delete']
   end
-  opts.on('-e', '--extract DEST_FILE_PATH') do |file_path|
-    jobs << ['extract', file_path]
+  opts.on('-e', '--extract', 'Extract File. Can be combined with --file and/or --dest') do
+    jobs << ['extract']
   end
   opts.on('--snapshot-create') do
     jobs << ['snapshot-create']
@@ -65,8 +64,14 @@ optparse = OptionParser.new do |opts|
   opts.on('-f', '--file FILE_ID') do |file_id|
     options[:file_id] = file_id
   end
-  opts.on('--files FILE_ID,FILE_ID') do |file_ids|
+  opts.on('--dest DESTINATION') do |file_dest|
+	options[:file_dest] = file_dest
+  end
+  opts.on('--files FILE_ID1,FILE_ID2,FILE_IDn') do |file_ids|
     options[:file_ids] = file_ids.split(',')
+  end
+  opts.on('--chunk-size BYTES') do |chunk_size|
+    options[:chunk_size] = chunk_size.to_f * 1000
   end
   opts.on('-s', '--snapshot SNAPSHOT_ID') do |snapshot_id|
     options[:snapshot_id] = snapshot_id
@@ -112,26 +117,34 @@ end
 jobs.each do |job|
   jobname = job[0]
   jobarguments = job[1..-1]
-  #puts jobarguments
-  #puts '--------------------'
-  #puts options
-  #puts '--------------------'
+  puts jobarguments
+  puts '--------------------'
+  puts options
+  puts '--------------------'
   if jobname == 'add_file'
-    file_id = archive.add(jobarguments[0], enable_dedup = true)
+    if options[:chunk_size]
+      file_id = archive.add(jobarguments[0], enable_dedup = true, chunk_size = options[:chunk_size])
+    else
+      file_id = archive.add(jobarguments[0], enable_dedup = true)
+    end
     unless options[:container_name].nil?
       archive.add_to_container(options[:container_name], file_id)
     end
   elsif jobname == 'add_folder'
     filelist, files_count = list_files(jobarguments[0])
     for file in filelist
-      file_id = archive.add(file, enable_dedup = true)
+      if options[:chunk_size]
+        file_id = archive.add(file, enable_dedup = true, chunk_size = options[:chunk_size])
+      else
+        file_id = archive.add(file, enable_dedup = true)
+      end
       unless options[:container_name].nil?
         archive.add_to_container(options[:container_name], file_id)
       end
     end
   elsif jobname == 'delete'
     if options[:file_id].nil? and options[:file_ids].nil? and options[:container_name].nil?
-      puts "--file FILE_ID or --container CONTAINER_NAME missing"
+      puts "--file FILE_ID or --files FILE_ID1,FILE_ID2,FILE_IDn or --container CONTAINER_NAME missing"
       raise OptionParser::MissingArgument
     else
       unless options[:file_id].nil?
@@ -155,14 +168,28 @@ jobs.each do |job|
       archive.delete_whitespace if success
     end
   elsif jobname == 'extract'
-    if options[:file_id].nil?
-      archive.list.each do |file_id, file_data|
-        dest_path = File.absolute_path(jobarguments[0]) + "/" + file_data['Path']
-        system('mkdir', '-p', File.dirname(dest_path))
-        archive.extract(file_id, dest_path)
+	if options[:file_id].nil?
+	  if options[:file_dest].nil?
+        archive.list.each do |file_id, file_data|
+          dest_path = File.absolute_path('.') + "/" + file_data['Path']
+          system('mkdir', '-p', File.dirname(dest_path))
+          archive.extract(file_id, dest_path)
+   		end
+	  else
+	    archive.list.each do |file_id, file_data|
+          dest_path = File.absolute_path(options[:file_dest]) + "/" + file_data['Path']
+          system('mkdir', '-p', File.dirname(dest_path))
+          archive.extract(file_id, dest_path)
+        end
       end
     else
-      archive.extract(options[:file_id], jobarguments[0])
+	  if options[:file_dest].nil?
+	    dest_path = File.absolute_path('.') + "/" + File.basename(archive.get_file_info(options[:file_id])['Path'])
+	  else
+		dest_path = File.absolute_path(options[:file_dest]) + "/" + File.basename(archive.get_file_info(options[:file_id])['Path'])
+	  end
+	  system('mkdir', '-p', File.dirname(dest_path))
+	  archive.extract(options[:file_id], dest_path)
     end
   elsif jobname == 'snapshot-create'
     if options[:file_id].nil?
@@ -197,7 +224,7 @@ jobs.each do |job|
     file_list.each do |file_id, file_data|
       puts "  ID: '#{file_id}'"
       puts "  PATH: #{file_data['Path']}"
-      if file_data['container']
+      if file_data['container'] and options[:container_name].nil?
         puts "  CONTAINER: #{file_data['container']}"
       end
       puts "---------------"

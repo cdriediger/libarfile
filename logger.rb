@@ -52,8 +52,6 @@ class Log
       raise ArfileError, msg
     rescue => e
       puts "=============================="
-      puts e.message
-      puts "=============================="
       puts e.backtrace
       puts "=============================="
     end

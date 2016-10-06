@@ -50,7 +50,7 @@ class ArFile
     $Log = Log.new(@path)
     $Log.level = Logger::DEBUG
     $Log.info('Initializing ArFile')
-    @metadata = MetadataManager.new(@path)
+    @metadata = MetadataManager.new(@path, read_only=false)
     @archive = ArchiveManager.new(@path, @metadata)
     @metadata.set_archive(@archive)
     if @metadata.new?
@@ -114,7 +114,7 @@ class ArFile
     return @metadata.files_by_container(containername)
   end
 
-  def add(file, enable_dedup = true)
+  def add(file, enable_dedup = true, chunk_size=10_485_760)
     $Log.info('Adding new File')
     if @archive.closed?
       $Log.error('    Archive is closed')
@@ -126,6 +126,10 @@ class ArFile
         fileobj = FileManager.new(path)
         $Log.info(" Filename: #{path}")
         if File.size?(path)
+          if File.size?(path) > 10_485_760 and enable_dedup
+            enable_dedup = false
+            $Log.info('    Disabled Dedublication. File is to big')
+          end
           $Log.info(" Filesize: #{File.size?(path).to_filesize}")
         else
           $Log.info(' Adding Empty File')
@@ -142,9 +146,9 @@ class ArFile
       $Log.info(' File need to be a FileObject or a Path')
       return
     end
-    if File.size?(path) > 10_485_760 and enable_dedup
-      enable_dedup = false
-      $Log.info('    Disabled Dedublication. File is to big')
+	if fileobj.directory?
+	  create_container(file)
+	  return
     end
     $Log.info("is_ascii?: #{is_ascii?(path)}")
     if not is_ascii?(path) and enable_dedup
@@ -166,18 +170,25 @@ class ArFile
         return file_id
       end
     end
+    $Log.debug("Using chunk size: #{chunk_size} bytes")
     file_id = @metadata.new_file(fileobj.path[1..-1], 'zlib', fileobj.hash, enable_dedup)
     part_id = 0
     enable_dedup = false
     if enable_dedup
       until fileobj.eof?
-        chunk_id = @archive.write_part(fileobj.read(16384), dedup = true)
+        chunk_id = @archive.write_part(fileobj.read(chunk_size), dedup = true)
         @metadata.new_part(file_id, part_id, chunk_id)
         part_id += 1
       end
     else
-      chunk_id = @archive.write_part(fileobj.read_all, dedup = false)
-      @metadata.new_part(file_id, part_id, chunk_id)
+      until fileobj.eof?
+        chunk_id = @archive.write_part(fileobj.read(chunk_size), dedup = false)
+        @metadata.new_part(file_id, part_id, chunk_id)
+        part_id += 1
+      end
+    end
+	if @metadata['Container'].include?(fileobj.dirname)
+	  add_to_container(fileobj.dirname, file_id)	  
     end
     fileobj.close
     @metadata.commit
@@ -272,7 +283,7 @@ class ArFile
     parts.values.each do |chunk_id|
       $Log.debug("    Reading Chunk: #{chunk_id}")
       data = @archive.read_chunk(chunk_id)
-      fileobj.write(data, 0)
+      fileobj.write(data)
     end
     fileobj.close
     $Log.info('Finished extracting')
@@ -369,7 +380,7 @@ class ArFile
     old_metadata = @metadata
     old_metadata.deactivate
     old_archive = @archive
-    new_metadata = MetadataManager.new(tmparchivefile_path)
+    new_metadata = MetadataManager.new(tmparchivefile_path, read_only=false)
     new_archive = ArchiveManager.new(tmparchivefile_path, new_metadata)
     new_metadata.set_archive(new_archive)
     new_metadata.enable_edit
@@ -437,6 +448,7 @@ class ArFile
     file_type_whitelist = ['sql']
     return true if file_type_whitelist.include?(file_type)
     if not Gem.win_platform?
+        puts "file -be apptype -e encoding -e tokens -e cdf -e compress -e elf -e soft -e tar #{filepath}"
         result = `file -be apptype -e encoding -e tokens -e cdf -e compress -e elf -e soft -e tar #{filepath}`
         return true if result.include?("ASCII")
     end

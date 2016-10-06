@@ -113,14 +113,14 @@ class MetadataManager < Hash
       $Log.info('   Writing final Metadata to Archive')
       write_to_file
     end
-    unless @changed
-      $Log.info('   Deleting Metadata Backup')
-      if File.exist?(@backupfilename)
-        File.delete(@backupfilename)
-      end
-    else
-      $Log.info('   Maybe not all metadata changes are saved. Leaving Backup')
+#    unless @changed
+    $Log.info('   Deleting Metadata Backup')
+    if File.exist?(@backupfilename)
+      File.delete(@backupfilename)
     end
+#    else
+#      $Log.info('   Maybe not all metadata changes are saved. Leaving Backup')
+#    end
   end
 
   def deactivate
@@ -318,7 +318,7 @@ class MetadataManager < Hash
   end
 
   def write_to_file(archive = @archive)
-    return if @read_only
+    $Log.fatal_error("Can't write metadata. Opened readonly") if @read_only
     $Log.debug('MM: WRITE TO FILE NEW')
     $Log.debug("   Appending Metadata to #{@path}")
     metadata = get_writable_data
@@ -347,7 +347,7 @@ class MetadataManager < Hash
   end
 
   def write_backup(function_name, object_id)
-    return if @read_only
+    $Log.fatal_error("Can't write metadata backup. Opened readonly") if @read_only
     $Log.debug('MM: WRITE METADATA BACKUP')
     $Log.debug("function_name: #{function_name}, object_id: #{object_id}")
     metadata = self.clone
