@@ -4,7 +4,7 @@ require 'json'
 require 'msgpack'
 require './logger.rb'
 require './ArchiveManager.rb'
-require './MetadataManager2.rb'
+require './MetadataManager.rb'
 require './ChunkManager2.rb'
 
 @path = File.absolute_path(ARGV[0])

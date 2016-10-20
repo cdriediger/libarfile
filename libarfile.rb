@@ -9,7 +9,7 @@ require 'msgpack'
 require 'json'
 require './logger.rb'
 require './ChunkManager2.rb'
-require './MetadataManager2.rb'
+require './MetadataManager.rb'
 require './ArchiveManager.rb'
 require './FileManager.rb'
 
