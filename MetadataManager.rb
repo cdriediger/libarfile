@@ -1,4 +1,4 @@
-require 'elif'
+require 'timeout'
 
 class MetadataManager < Hash
 
@@ -15,24 +15,34 @@ class MetadataManager < Hash
       @found = false
       @length = 0
       begin
-        fileobj = Elif.open(path)
+        fileobj = File.open(path)
       rescue Errno::ENOENT
+		$Log.error("failed to open file #{path}")
         return false
       end
       begin
-        superblock_msp = fileobj.readline
+        @superblock_msp = fileobj.readline
+        $Log.debug("read superblock")
       rescue EOFError
+        $Log.error("error while reading superblock")
         return false
       end
       $Log.debug('   Found potential Superblock')
-      $Log.debug(superblock_msp)
+      $Log.debug(@superblock_msp)
       begin
-        @superblock = MessagePack.unpack(superblock_msp)
+		$Log.debug("parsing superblock:")
+        $Log.debug('------------------------------')
+        $Log.debug(@superblock_msp[0..-3])
+        $Log.debug('------------------------------')
+        @superblock = MessagePack.unpack(@superblock_msp[0..-3])
+		$Log.debug('------------------------------')
+        $Log.debug(@superblock)
+        $Log.debug('------------------------------')
         self.merge!(@superblock)
         @found = true
-        @length = superblock_msp.length
-      rescue MessagePack::MalformedFormatError
-        return false
+        @length = @superblock_msp.length
+      rescue MessagePack::MalformedFormatError => e
+        $Log.error("Failed to unpack superblock. Error #{e}")
       end
       $Log.debug('   Found Superblock')
       $Log.debug(@superblock)
@@ -59,11 +69,11 @@ class MetadataManager < Hash
     @archive = nil
     @initial_metadata_is_overwritten = false
     @found_init_metadata = false
-    if File.exist?(@backupfilename)
-      $Log.debug('   Found Metadata Backup')
-      self.merge!(restore_metadata_backup)
-      commit
-    else
+    #if File.exist?(@backupfilename)
+    #  $Log.debug('   Found Metadata Backup')
+    #  self.merge!(restore_metadata_backup)
+    #  commit
+    #else
       @superblock = Superblock.new(@path)
       if @superblock.found?
         parsed_metadata = parse_metadata(@superblock)
@@ -73,7 +83,7 @@ class MetadataManager < Hash
           $Log.debug(self['Chunks'])
         end
       end
-    end
+    #end
     if self.empty?
       @new = true
     else
@@ -83,7 +93,7 @@ class MetadataManager < Hash
     self['PartHashes'] = Hash.new unless self.has_key?('PartHashes') # {MD5-Hash:CHUNK-ID}
     self['Files'] = Hash.new unless self.has_key?('Files')
     # {FILE-ID:{"Path":PATH,"md5":MD5-HASH,"dedup":bool,"container":containername,"Parts":{PART_ID:CHUNK-ID]}}}
-    self['Chunks'] = Hash.new unless self.has_key?('Chunks')
+    #self['Chunks'] = Hash.new unless self.has_key?('Chunks')
     # {CHUNK-ID => [start, length, written, [locking_snapshot_id1, locking_snapshot_idN]]}
     self['EndOfArchive'] = 0   unless self.has_key?('EndOfArchive')
     self['Snapshots'] = Hash.new unless self.has_key?('Snapshots') # {"created" => Time, "Metadata" => Metadata_json}
@@ -339,7 +349,7 @@ class MetadataManager < Hash
       @superblock = {'Hash' => metadata_hash,
                       'Start' => start,
                       'Stop' => length}.to_msgpack
-      @superblock.insert(0, %Q< \n>)
+      @superblock << %Q< \n>
       $Log.debug("MM: @superblock: #{superblock}")
       archive.write_part(@superblock, debup = false, is_superblock = true)
       $Log.debug("MM: Wrote @superblock at End of Archive")

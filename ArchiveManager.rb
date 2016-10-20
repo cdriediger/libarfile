@@ -33,8 +33,6 @@ class ArchiveManager
     @filemanager.enable_write
     if @metadata.superblock.found?
       @metadata.set_end_of_archive(@filemanager.get_end_of_file - @metadata.superblock.length)
-    else
-      @metadata.set_end_of_archive(0)
     end
   end
 
@@ -67,7 +65,8 @@ class ArchiveManager
     $Log.debug('AM: WRITE PART')
     if is_superblock
       $Log.debug('   Data is Superblock')
-      chunk_start = @filemanager.get_end_of_file
+      #chunk_start = @filemanager.get_end_of_file
+      chunk, chunk_start, chunk_length = @metadata.chunks.get_superblock_chunk
     else
       data = Compressor::compress(data)
       if dedup

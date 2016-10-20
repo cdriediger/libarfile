@@ -9,7 +9,7 @@ require 'msgpack'
 require 'json'
 require './logger.rb'
 require './ChunkManager2.rb'
-require './MetadataManager.rb'
+require './MetadataManager2.rb'
 require './ArchiveManager.rb'
 require './FileManager.rb'
 
@@ -146,9 +146,9 @@ class ArFile
       $Log.info(' File need to be a FileObject or a Path')
       return
     end
-	if fileobj.directory?
-	  create_container(file)
-	  return
+  if fileobj.directory?
+    create_container(file)
+    return
     end
     $Log.info("is_ascii?: #{is_ascii?(path)}")
     if not is_ascii?(path) and enable_dedup
@@ -187,8 +187,8 @@ class ArFile
         part_id += 1
       end
     end
-	if @metadata['Container'].include?(fileobj.dirname)
-	  add_to_container(fileobj.dirname, file_id)	  
+  if @metadata['Container'].include?(fileobj.dirname)
+    add_to_container(fileobj.dirname, file_id)    
     end
     fileobj.close
     @metadata.commit

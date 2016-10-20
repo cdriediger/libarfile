@@ -140,7 +140,13 @@ class ChunkManager
     @metadataChunks = []
     $Log.debug('Parsing Chunks:')
     @chunks = {}
-    @metadata['Chunks'] = Hash.new unless @metadata.has_key?('Chunks')
+	unless @metadata.has_key?('Chunks')
+      @metadata['Chunks'] = Hash.new
+	  superblock_chunk = register_chunk("0", 0, 100, 1)
+	  @chunks[0] = superblock_chunk
+      $Log.debug("Creating Superblock chunk: Start: 0 Length 1000")
+    end
+	$Log.debug("EndOfArchive: #{@metadata['EndOfArchive']}")
     # {CHUNK-ID => [start, length, written, [locking_snapshot_id1, locking_snapshot_idN]]}
     @metadata['Chunks'].each_pair do |chunk_id, chunk_data| # {CHUNK-ID => [start, length, written, locked]}
       chunk = register_chunk(chunk_id, chunk_data[0], chunk_data[1], chunk_data[2], chunk_data[3])
@@ -189,6 +195,10 @@ class ChunkManager
     @metadataChunk = chunk
     mark_chunk_as_written(chunk)
     return [chunk, chunk_start, chunk_length]
+  end
+
+  def get_superblock_chunk
+	return [@chunks[0], @chunks[0].start, @chunks[0].length]
   end
 
   def get_chunk_by_id(chunk_id)

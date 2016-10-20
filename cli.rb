@@ -65,7 +65,7 @@ optparse = OptionParser.new do |opts|
     options[:file_id] = file_id
   end
   opts.on('--dest DESTINATION') do |file_dest|
-	options[:file_dest] = file_dest
+  options[:file_dest] = file_dest
   end
   opts.on('--files FILE_ID1,FILE_ID2,FILE_IDn') do |file_ids|
     options[:file_ids] = file_ids.split(',')
@@ -168,28 +168,28 @@ jobs.each do |job|
       archive.delete_whitespace if success
     end
   elsif jobname == 'extract'
-	if options[:file_id].nil?
-	  if options[:file_dest].nil?
+  if options[:file_id].nil?
+    if options[:file_dest].nil?
         archive.list.each do |file_id, file_data|
           dest_path = File.absolute_path('.') + "/" + file_data['Path']
           system('mkdir', '-p', File.dirname(dest_path))
           archive.extract(file_id, dest_path)
-   		end
-	  else
-	    archive.list.each do |file_id, file_data|
+      end
+    else
+      archive.list.each do |file_id, file_data|
           dest_path = File.absolute_path(options[:file_dest]) + "/" + file_data['Path']
           system('mkdir', '-p', File.dirname(dest_path))
           archive.extract(file_id, dest_path)
         end
       end
     else
-	  if options[:file_dest].nil?
-	    dest_path = File.absolute_path('.') + "/" + File.basename(archive.get_file_info(options[:file_id])['Path'])
-	  else
-		dest_path = File.absolute_path(options[:file_dest]) + "/" + File.basename(archive.get_file_info(options[:file_id])['Path'])
-	  end
-	  system('mkdir', '-p', File.dirname(dest_path))
-	  archive.extract(options[:file_id], dest_path)
+    if options[:file_dest].nil?
+      dest_path = File.absolute_path('.') + "/" + File.basename(archive.get_file_info(options[:file_id])['Path'])
+    else
+    dest_path = File.absolute_path(options[:file_dest]) + "/" + File.basename(archive.get_file_info(options[:file_id])['Path'])
+    end
+    system('mkdir', '-p', File.dirname(dest_path))
+    archive.extract(options[:file_id], dest_path)
     end
   elsif jobname == 'snapshot-create'
     if options[:file_id].nil?
