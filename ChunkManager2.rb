@@ -16,14 +16,18 @@ class Chunk < String
     else
       locked = locked
     end
-    $Log.debug("Initializing Chunk: #{id} start: #{start} length: #{length} written: #{written} locked: #{locked}")
+    if id == "0"
+      $Log.debug("Initializing superblock chunk: #{id} start: #{start} length: #{length} written: #{written} locked: #{locked}")
+    else
+      $Log.debug("Initializing chunk: #{id} start: #{start} length: #{length} written: #{written} locked: #{locked}")
+    end
     @metadata = metadata
     end_of_chunk = start + length
     if end_of_chunk > @metadata['EndOfArchive']
       $Log.debug("   Setting End_of_archive to #{end_of_chunk}")
       @metadata.set_end_of_archive(end_of_chunk)
     else
-      $Log.debug("   NOT Setting End_of_archive: #{@metadata['EndOfArchive']} next_byte: #{end_of_chunk}")
+      $Log.debug("   NOT setting End_of_archive: #{@metadata['EndOfArchive']} next_byte: #{end_of_chunk}")
     end
     if @metadata['Chunks'].has_key?(@id)
       mstart, mlength, mwritten, mlocked = @metadata['Chunks'][@id]
@@ -140,13 +144,13 @@ class ChunkManager
     @metadataChunks = []
     $Log.debug('Parsing Chunks:')
     @chunks = {}
-	unless @metadata.has_key?('Chunks')
+    unless @metadata.has_key?('Chunks')
       @metadata['Chunks'] = Hash.new
-	  superblock_chunk = register_chunk("0", 0, 100, 1)
-	  @chunks[0] = superblock_chunk
+      superblock_chunk = register_chunk("0", 0, 100, 1)
+      @chunks[0] = superblock_chunk
       $Log.debug("Creating Superblock chunk: Start: 0 Length 1000")
     end
-	$Log.debug("EndOfArchive: #{@metadata['EndOfArchive']}")
+    $Log.debug("EndOfArchive: #{@metadata['EndOfArchive']}")
     # {CHUNK-ID => [start, length, written, [locking_snapshot_id1, locking_snapshot_idN]]}
     @metadata['Chunks'].each_pair do |chunk_id, chunk_data| # {CHUNK-ID => [start, length, written, locked]}
       chunk = register_chunk(chunk_id, chunk_data[0], chunk_data[1], chunk_data[2], chunk_data[3])
@@ -198,7 +202,7 @@ class ChunkManager
   end
 
   def get_superblock_chunk
-	return [@chunks[0], @chunks[0].start, @chunks[0].length]
+    return [@chunks['0'], @chunks['0'].start, @chunks['0'].length]
   end
 
   def get_chunk_by_id(chunk_id)
