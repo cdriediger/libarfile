@@ -1,4 +1,6 @@
-require 'timeout'
+#TODO:
+# * Mode write_to_file to Superblock class
+# * Set Flag in superblock if archive ist opened to see if it was closed properly last time
 
 class MetadataManager < Hash
 
