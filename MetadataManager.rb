@@ -449,7 +449,11 @@ class MetadataManager < Hash
     metadatafileobj.seek(@superblock['Start'])
     metadata_length = @superblock['Stop'] - superblock['Start']
     metadata_msp = Compressor.restore(metadatafileobj.read(metadata_length))
-    metadata = MessagePack.unpack(metadata_msp)
+    begin
+      metadata = MessagePack.unpack(metadata_msp)
+    rescue MessagePack::UnknownExtTypeError => e
+      $Log.fatal_error("Failed to unpack Metadata. Error: #{e}")
+    end
     $Log.debug(metadata)
     return metadata
   end

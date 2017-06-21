@@ -7,11 +7,16 @@ require 'fileutils'
 require 'time'
 require 'msgpack'
 require 'json'
-require './logger.rb'
-require './ChunkManager2.rb'
-require './MetadataManager.rb'
-require './ArchiveManager.rb'
-require './FileManager.rb'
+require_relative 'logger2'
+require_relative 'ChunkManager2'
+require_relative 'MetadataManager'
+require_relative 'ArchiveManager'
+require_relative 'FileManager'
+
+# TODO:
+# * replace local logger class with ruby std logger
+#   * build config option for logging level / destination
+#   * maybe build two logger instances (STDOUT / logfile)
 
 class Integer
 
@@ -47,8 +52,8 @@ class ArFile
     @closed = false
     @closing = false
     @path = File.absolute_path(path)
-    $Log = Log.new(@path)
-    $Log.level = Logger::DEBUG
+    $Log = Logging.logger(STDOUT)
+    $Log.level = :info
     $Log.info('Initializing ArFile')
     @metadata = MetadataManager.new(@path, read_only=false)
     @archive = ArchiveManager.new(@path, @metadata)
