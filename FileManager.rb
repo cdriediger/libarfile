@@ -1,5 +1,13 @@
 require 'digest'
 
+module Hasher
+
+  def self.hash(data)
+    return Digest::MD5.hexdigest(data)
+  end
+
+end
+
 class FileManager
 
   attr_reader :path
@@ -151,7 +159,7 @@ class FileManager
     $Log.debug("FM: GET HASH OF FILE #{path}")
     cur_pos = @filehandle.tell
     @filehandle.seek(0)
-    hash = Digest::MD5.hexdigest(@filehandle.read)
+    hash = Hasher.hash(@filehandle.read)
     @filehandle.seek(cur_pos)
     return hash
   end

@@ -155,9 +155,9 @@ class ArFile
       $Log.info(' File need to be a FileObject or a Path')
       return
     end
-  if fileobj.directory?
-    create_container(file)
-    return
+    if fileobj.directory?
+      create_container(file)
+      return
     end
     $Log.info("is_ascii?: #{is_ascii?(path)}")
     if not is_ascii?(path) and enable_dedup
@@ -196,8 +196,8 @@ class ArFile
         part_id += 1
       end
     end
-  if @metadata['Container'].include?(fileobj.dirname)
-    add_to_container(fileobj.dirname, file_id)    
+    if @metadata['Container'].include?(fileobj.dirname)
+      add_to_container(fileobj.dirname, file_id)    
     end
     fileobj.close
     @metadata.commit
@@ -205,32 +205,34 @@ class ArFile
     return file_id
   end
 
-  def adds(path, data, enable_dedup = true)
-    $Log.info("Adding new data with path/identified: #{path}")
+  def adds(path, data, enable_dedup = true, chunk_size=10_485_760)
+    $Log.info('Adding new Data')
     if @archive.closed?
-      $Log.debug('Archive is closed')
+      $Log.error('    Archive is closed')
       return
     end
+    calculate_part_hashes if enable_dedup and not @calculated_part_hashes
     @metadata.enable_edit
-    hash = Digest::MD5.new
-    $Log.debug('    Calculating MD5 Hash of Data')
-    hash.update(data)
-    hash = hash.hexdigest
-    $Log.debug("        Hash: #{hash}")
-    $Log.debug('    Requesting File ID')
-    file_id = @metadata.new_file(path, 'zlib', hash, enable_dedup)
-    $Log.debug("        File ID: #{file_id}")
-    part_id = 0
-    parts = data.scan(/.{#{@archive.max_chunk_size}}/)
-    parts.each do |part|
-      chunk_id = @archive.write_part(part, dedup = enable_dedup)
-      start, length = @metadata.chunks.get_chunk_by_id(chunk_id)
-      $Log.debug("        Wrote Part: #{part_id} starting at chunk: #{chunk_id} start: #{start} length #{length}")
-      @metadata.new_part(file_id, part_id, chunk_id)
-      part_id += 1
+    hash = Hasher.hash(data)
+    if @metadata['FileHashes'].keys.include?(hash)
+      existing_file_id = @metadata['FileHashes'][hash]
+      $Log.error("    File already in Archive. ID: #{existing_file_id}")
+      if path[1..-1] == @metadata['Files'][existing_file_id]['Path']
+        return @metadata['FileHashes'][hash]
+      else
+        file_id = @metadata.new_file(path[1..-1], 'zlib', hash, enable_dedup)
+        @metadata['Files'][file_id]['Parts'] = @metadata['Files'][@metadata['FileHashes'][hash]]['Parts']
+        return file_id
+      end
     end
+    $Log.debug("Using chunk size: #{chunk_size} bytes")
+    file_id = @metadata.new_file(path[1..-1], 'zlib', hash, enable_dedup)
+    part_id = 0
+    enable_dedup = false
+    chunk_id = @archive.write_part(data, dedup = enable_dedup)
+    @metadata.new_part(file_id, part_id, chunk_id)
     @metadata.commit
-    $Log.info('Finished adding Data')
+    $Log.info('Finished adding File')
     return file_id
   end
 
