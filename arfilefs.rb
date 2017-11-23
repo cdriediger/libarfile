@@ -12,7 +12,7 @@ class ArfileFS < FuseFS::FuseDir
     $Log.info('Initializing ArFileFS')
     $Log.info("Mountpoint: #{ARGV[0]}")
     $Log.info("Archive: #{ARGV[1]}")
-    @archive = ArFile.new(ARGV[1])
+    @archive = ArFile.new(ARGV[1], $Log)
     @files = {}
     @dirs = [] 
     @archive.list.each_pair do |file_id, file_metadata|

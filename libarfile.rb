@@ -48,12 +48,16 @@ class ArFile
   attr_reader :metadata
   attr_accessor :archive
 
-  def initialize(path)
+  def initialize(path, log=nil)
     @closed = false
     @closing = false
     @path = File.absolute_path(path)
-    $Log = Logging.logger(STDOUT)
-    $Log.level = :info
+    if log
+      $Log = log
+    else
+      $Log = Logging.logger(STDOUT)
+      $Log.level = :info
+    end
     $Log.info('Initializing ArFile')
     @metadata = MetadataManager.new(@path, read_only=false)
     @archive = ArchiveManager.new(@path, @metadata)
