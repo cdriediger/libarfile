@@ -234,7 +234,7 @@ jobs.each do |job|
     puts "Snapshot List:"
     archive.list_snapshots.each do |snapshot_id, snapshot_metadata|
       puts "Snapshot ID: #{snapshot_id}"
-	  puts "Snapshot Name: #{snapshot_metadata['Name']}
+	  puts "Snapshot Name: #{snapshot_metadata['Name']}"
       puts "CREATED: #{snapshot_metadata['Created']}"
       puts "FILES: "
       snapshot_metadata['Files'].each do |file_id, file_data|
