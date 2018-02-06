@@ -10,7 +10,7 @@ class Chunk < String
       written = 0
     end
     if locked.kind_of?(TrueClass)
-      $Log.fatal_error('Locked has to be a list of locking snaphot_ids')
+      $Log.fatal_error('Locked has to be a list of locking snapshot_ids')
     elsif locked.kind_of?(FalseClass)
       locked = []
     else
@@ -141,7 +141,7 @@ class ChunkManager
     @emptyChunks = []
     @emptyChunks_start = {}
     @emptyChunks_length = {}
-	@lockedChunks = {} #{snaphot_id => [chunk_1, chunk_2, chunk_n]}
+	@lockedChunks = {} #{snapshot_id => [chunk_1, chunk_2, chunk_n]}
     @metadataChunks = []
     $Log.debug('Parsing Chunks:')
     @chunks = {}
@@ -386,9 +386,9 @@ class ChunkManager
       locked = []
     end
 	unless locked.empty?
-	  locked.each do |snaphot_id|
+	  locked.each do |snapshot_id|
 		@lockedChunks[snapshot_id] = [] unless @lockedChunks.has_key?(snapshot_id)
-	    @lockedChunks[snaphot_id] << chunk_id
+	    @lockedChunks[snapshot_id] << chunk_id
 	  end
 	end
     chunk = Chunk.new(start, length, written, locked, chunk_id, @metadata)
