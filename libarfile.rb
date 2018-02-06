@@ -321,11 +321,12 @@ class ArFile
     return data
   end
 
-  def create_snapshot
+  def create_snapshot(snapshot_name)
     $Log.info("Create Snapshot")
     @metadata.enable_edit
-    result = @metadata.create_snapshot
+    snapshot_id = @metadata.create_snapshot(snapshot_name)
     @metadata.commit
+	return snapshot_id
   end
 
   def create_file_snapshot(file_id)
@@ -335,8 +336,13 @@ class ArFile
       return false
     end
     @metadata.enable_edit
-    result = @metadata.create_snapshot(napshot_id = Usid.usid, time = Time.now.to_f, file_id = file_id)
+    snapshot_id = @metadata.create_snapshot(snapshot_id = Usid.usid, time = Time.now.to_f, file_id = file_id)
     @metadata.commit
+	return snapshot_id
+  end
+  
+  def get_snapshot_id(snapshot_name)
+	return @metadata.get_snapshot_by_name(snaphot_name)
   end
 
   def rollback_snapshot(snapshot_id)

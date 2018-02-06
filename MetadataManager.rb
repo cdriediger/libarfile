@@ -99,6 +99,7 @@ class MetadataManager < Hash
     # {CHUNK-ID => [start, length, written, [locking_snapshot_id1, locking_snapshot_idN]]}
     self['EndOfArchive'] = 0   unless self.has_key?('EndOfArchive')
     self['Snapshots'] = Hash.new unless self.has_key?('Snapshots') # {"created" => Time, "Metadata" => Metadata_json}
+	self['Snapshot_Names'] = Hash.new unless self.has_key?('Snapshot_Names')
     self['Container'] = Hash.new unless self.has_key?('Container') # {'container_name' => [FILE-IDs]}
     self['last_chunk_id'] = 0 unless self.has_key?('last_chunk_id')
     @final_metadata = self.clone
@@ -228,16 +229,21 @@ class MetadataManager < Hash
     self['PartHashes'][part_hash] = chunk_id
   end
 
-  def create_snapshot(snapshot_id = Usid.usid, time = Time.now.to_f, files = self['Files'].clone)
+  def create_snapshot(snapshot_name, snapshot_id = Usid.usid, time = Time.now.to_f, files = self['Files'].clone)
     $Log.fatal_error('!!Metadata NOT Editable!!') unless @editable
     $Log.debug('MM: CREATE SNAPSHOT')
     @changed = true
     write_backup('create_snapshot', snapshot_id)
-    self['Snapshots'][snapshot_id] = {'Created' => time, 'Files' => files}
+    self['Snapshots'][snapshot_id] = {'Name' => snapshot_name, 'Created' => time, 'Files' => files}
+	self['Snapshot_Names'][snapshot_name] = snapshot_id
     @chunks.writtenChunks.each do |chunk_id|
       @chunks.lock_chunk(snapshot_id, chunk_id)
     end
     return snapshot_id
+  end
+  
+  def get_snapshot_by_name(snaphot_name)
+    return self['Snapshot_Names'][snapshot_name]
   end
 
   def rollback_snapshot(snapshot_id)

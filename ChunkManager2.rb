@@ -164,8 +164,6 @@ class ChunkManager
     $Log.debug('CM: CLOSE CHUNKMANAGER')
   end
 
-# public
-
   def set_metadata_chunk(chunk_start, chunk_end)
     $Log.debug('CM: SET METADATA CHUNK')
     $Log.debug("    chunk_start: #{chunk_start} | chunk_end: #{chunk_end}")
@@ -220,17 +218,8 @@ class ChunkManager
     end
     transform_to_empty_chunk(chunk)
     unless chunk.is_locked?
-#      if chunk_is_last_chunk?(chunk)
-#        @metadata.set_end_of_archive(chunk.start)
-#        @emptyChunks.delete(chunk)
-#        @emptyChunks_start.delete(chunk.start)
-#        @emptyChunks_length.delete(chunk.length)
-#        @chunks.delete(chunk)
-#        chunk.delete
-#      else
         chunk = combine_with_previous_chunk_if_empty(chunk)
         chunk = combine_with_next_chunk_if_empty(chunk)
-#      end
     end
   end
 
@@ -254,8 +243,6 @@ class ChunkManager
     chunk = @chunks[chunk] unless chunk.kind_of?(Chunk)
     transform_to_written_chunk(chunk)
   end
-
-  #private
 
   def chunk_is_last_chunk?(chunk)
     $Log.debug("CM: CHUNK #{chunk} IS LAST CHUNK?")
@@ -341,8 +328,6 @@ class ChunkManager
     matching_chunks = {}
     $Log.debug("   emptyChunks: #{@emptyChunks}")
     @emptyChunks.each do |chunk|
-      #puts chunk
-      #puts chunk.class
       if chunk.length >= data_length
         matching_chunks[chunk.length] = chunk
       end
@@ -378,20 +363,6 @@ class ChunkManager
     chunk = register_chunk(chunk_id, chunk_start, chunk_length)
     return chunk
   end
-
-#  def mark_chunk_as_written(chunk)
-#    $Log.fatal_error('!!Metadata NOT Editable!!') unless @metadata.is_editable?
-#    $Log.debug('CM: MARK CHUNK AS written')
-#    chunk = @chunks[chunk] unless chunk.kind_of?(Chunk)
-#    transform_to_written_chunk(chunk)
-#    end_of_chunk = chunk.start + chunk.length
-#    if end_of_chunk > @metadata['EndOfArchive']
-#      $Log.debug("   Setting End_of_archive to #{end_of_chunk}")
-#      @metadata.set_end_of_archive(end_of_chunk)
-#    else
-#      $Log.debug("   NOT Setting End_of_archive: #{@metadata['EndOfArchive']} next_byte: #{end_of_chunk}")
-#    end
-#  end
 
   def register_chunk(chunk_id, start, length, written = 0, locked = [])
     $Log.debug('CM: REGISTER CHUNK')
