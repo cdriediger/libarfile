@@ -15,6 +15,7 @@ class Log
     else
       @logger = nil
     end
+	@quiet = false
   end
 
   def quiet!
@@ -28,9 +29,7 @@ class Log
   def debug(msg)
     return if @quiet
     @logger.debug(msg) if @logger
-#    if $print_debug
-#    puts(msg)
-#    end
+    puts(msg)
   end
 
   def info(msg)

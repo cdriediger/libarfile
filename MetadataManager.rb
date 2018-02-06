@@ -2,6 +2,20 @@
 # * Mode write_to_file to Superblock class
 # * Set Flag in superblock if archive ist opened to see if it was closed properly last time
 
+module MetadataEncoder
+
+  def self::encode(metadata)
+    #return metadata.to_msgpack
+	return JSON.generate(metadata)
+  end
+  
+  def self.decode(metadata)
+    #return MessagePack.unpack(metadata)
+	return JSON.parse(metadata)
+  end
+  
+end
+
 class MetadataManager < Hash
 
   attr_accessor :writable_data
@@ -36,7 +50,7 @@ class MetadataManager < Hash
         $Log.debug('------------------------------')
         $Log.debug(@superblock_msp[0..-3])
         $Log.debug('------------------------------')
-        @superblock = MessagePack.unpack(@superblock_msp[0..-3])
+        @superblock = MetadataEncoder::decode(@superblock_msp[0..-3])
 		$Log.debug('------------------------------')
         $Log.debug(@superblock)
         $Log.debug('------------------------------')
@@ -342,7 +356,7 @@ class MetadataManager < Hash
     metadata = get_writable_data
     if metadata
       begin
-        metadata_final = metadata.to_msgpack
+        metadata_final = MetadataEncoder::encode(metadata)
         $Log.debug("############")
         $Log.debug(metadata_final)
         $Log.debug("############")
@@ -354,9 +368,9 @@ class MetadataManager < Hash
       $Log.debug("MM: Wrote Metadata at Chunk #{chunk_id}")
       start, size = @chunks.get_chunk_by_id(chunk_id)
       length = start + size
-      @superblock = {'Hash' => metadata_hash,
+      @superblock = MetadataEncoder::encode({'Hash' => metadata_hash,
                       'Start' => start,
-                      'Stop' => length}.to_msgpack
+                      'Stop' => length})
       @superblock << %Q< \n>
       $Log.debug("MM: @superblock: #{superblock}")
       archive.write_part(@superblock, debup = false, is_superblock = true)
@@ -372,7 +386,7 @@ class MetadataManager < Hash
     metadata['current_task'] = [function_name, object_id]
     metadata['create_time'] = Time.now.to_f
     begin
-      metadata_msgpack = metadata.to_msgpack
+      metadata_msgpack = MetadataEncoder::encode(metadata)
     rescue RangeError, NoMethodError
       $Log.fatal_error(JSON.generate(metadata))
     end
@@ -384,7 +398,7 @@ class MetadataManager < Hash
   def restore_metadata_backup
     $Log.info('MM: RESTORE METADATA BACKUP')
     backupfile = File.open(@backupfilename, 'r')
-    metadata_backup = MessagePack.unpack(backupfile.read)
+    metadata_backup = Enode::decode(backupfile.read)
     metadata_archive = parse_metadata
     if metadata_archive
       if metadata_backup['create_time'] > metadata_archive['create_time']
@@ -456,7 +470,7 @@ class MetadataManager < Hash
     metadata_length = @superblock['Stop'] - superblock['Start']
     metadata_msp = Compressor.restore(metadatafileobj.read(metadata_length))
     begin
-      metadata = MessagePack.unpack(metadata_msp)
+      metadata = MetadataEncoder::decode(metadata_msp)
     rescue MessagePack::UnknownExtTypeError => e
       $Log.fatal_error("Failed to unpack Metadata. Error: #{e}")
     end

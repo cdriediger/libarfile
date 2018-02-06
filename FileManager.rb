@@ -51,7 +51,7 @@ class FileManager
   end
 
   def open(mode=@mode)
-    $Log.debug("FM: OPEN FILE #{path}")
+    $Log.debug("FM: OPEN FILE #{path} with mode #{@mode}")
     @mode = mode unless @mode == mode
     fd = IO.sysopen(@path, mode)
     @filehandle = IO.new(fd, mode)
@@ -84,10 +84,10 @@ class FileManager
 
   def enable_write
     $Log.debug("FM: ENABLE WRITE #{path}")
-  return if ['w', 'r+'].include?(@mode)
+  return if ['w', 'r+', 'r+b'].include?(@mode)
     cur_pos = @filehandle.tell
     close
-    open('r+')
+	open('r+')
     @filehandle.seek(cur_pos)
   end
 
@@ -130,7 +130,8 @@ class FileManager
     end
   $Log.debug("FM: Seeked to start: #{@filehandle.tell}")
   start = @filehandle.tell
-    length = @filehandle.write(data)
+  length = @filehandle.write(data)
+  $Log.debug("FM: BINMODE??: #{@filehandle.binmode?}")
   @writepos = @filehandle.tell
   $Log.debug("FM: SET writepos = #{@filehandle.tell}")
     $Log.debug("FM: WROTE #{length} Bytes to #{path} starting at: #{start}")

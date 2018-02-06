@@ -2,14 +2,14 @@
 
 require 'json'
 require 'msgpack'
-require './logger.rb'
-require './ArchiveManager.rb'
-require './MetadataManager.rb'
-require './ChunkManager2.rb'
+require_relative 'logger.rb'
+require_relative 'ArchiveManager.rb'
+require_relative 'MetadataManager.rb'
+require_relative 'ChunkManager2.rb'
 
 @path = File.absolute_path(ARGV[0])
 $Log = Log.new(@path)
-$Log.quiet!
+#$Log.quiet!
 metadata = MetadataManager.new(@path)
 puts JSON.pretty_generate(metadata.superblock)
 puts "##############################"
