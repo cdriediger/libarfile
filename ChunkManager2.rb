@@ -141,6 +141,7 @@ class ChunkManager
     @emptyChunks = []
     @emptyChunks_start = {}
     @emptyChunks_length = {}
+	@lockedChunks = {} #{snaphot_id => [chunk_1, chunk_2, chunk_n]}
     @metadataChunks = []
     $Log.debug('Parsing Chunks:')
     @chunks = {}
@@ -209,6 +210,10 @@ class ChunkManager
     end
     return [@chunks[chunk_id].start, @chunks[chunk_id].length]
   end
+  
+  def get_chunks_locked_by(snapshot_id)
+	return @lockedChunks[snapshot_id]
+  end
 
   def return_chunk(chunk_id)
     $Log.debug("CM: RETURN CHUNK #{chunk_id}")
@@ -227,6 +232,7 @@ class ChunkManager
     $Log.fatal_error('!!Metadata NOT Editable!!') unless @metadata.is_editable?
     $Log.debug('CM: LOCK CHUNK')
     chunk = @chunks[chunk] unless chunk.kind_of?(Chunk)
+	@lockedChunks[snapshot_id] << chunk.id
     chunk.lock(snapshot_id)
   end
 
@@ -234,6 +240,7 @@ class ChunkManager
     $Log.fatal_error('!!Metadata NOT Editable!!') unless @metadata.is_editable?
     $Log.debug('CM: UNLOCK CHUNK')
     chunk = @chunks[chunk] unless chunk.kind_of?(Chunk)
+	@lockedChunks[snapshot_id].delete(chunk.id)
     chunk.unlock(snapshot_id)
   end
 
@@ -377,6 +384,11 @@ class ChunkManager
     elsif locked.kind_of?(FalseClass)
       locked = []
     end
+	unless locked.empty?
+	  locked.each do |snaphot_id|
+	    @lockedChunks[snaphot_id] << chunk_id
+	  end
+	end
     chunk = Chunk.new(start, length, written, locked, chunk_id, @metadata)
     @chunks[chunk_id] = chunk
     if written == 0

@@ -260,7 +260,7 @@ class MetadataManager < Hash
     $Log.debug('MM: DELETE SNAPSHOT')
     @changed = true
     write_backup('delete_snapshot', snapshot_id)
-    chunklist = @chunks.lockedChunks[snapshot_id].clone
+    chunklist = @chunks.get_chunks_locked_by(snapshot_id)
     chunklist.each do |chunk_id|
       @chunks.unlock_chunk(snapshot_id, chunk_id)
     end
