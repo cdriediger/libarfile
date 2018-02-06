@@ -386,6 +386,7 @@ class ChunkManager
     end
 	unless locked.empty?
 	  locked.each do |snaphot_id|
+		@lockedChunks[snaphot_id] = [] unless @lockedChunks.has_key?(snaphot_id)
 	    @lockedChunks[snaphot_id] << chunk_id
 	  end
 	end
