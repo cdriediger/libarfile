@@ -232,6 +232,7 @@ class ChunkManager
     $Log.fatal_error('!!Metadata NOT Editable!!') unless @metadata.is_editable?
     $Log.debug('CM: LOCK CHUNK')
     chunk = @chunks[chunk] unless chunk.kind_of?(Chunk)
+	@lockedChunks[snapshot_id] = [] unless @lockedChunks.has_key?(snapshot_id)
 	@lockedChunks[snapshot_id] << chunk.id
     chunk.lock(snapshot_id)
   end
@@ -386,7 +387,7 @@ class ChunkManager
     end
 	unless locked.empty?
 	  locked.each do |snaphot_id|
-		@lockedChunks[snaphot_id] = [] unless @lockedChunks.has_key?(snaphot_id)
+		@lockedChunks[snapshot_id] = [] unless @lockedChunks.has_key?(snapshot_id)
 	    @lockedChunks[snaphot_id] << chunk_id
 	  end
 	end
