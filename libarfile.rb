@@ -2,7 +2,6 @@
 
 require 'securerandom'
 require 'digest/md5'
-require 'zlib'
 require 'fileutils'
 require 'time'
 require 'msgpack'

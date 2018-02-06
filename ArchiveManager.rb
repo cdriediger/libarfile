@@ -1,24 +1,11 @@
+require_relative 'ZlibCompressor'
+
 class Fixnum
   def num_digits
     Math.log10(self).to_i + 1
   end
 end
 
-module Compressor
-
-  require 'lzma'
-
-  def self.compress(data)
-    #return data
-    return LZMA.compress(data)
-  end
-
-  def self.restore(comp_data)
-    #return comp_data
-    LZMA.decompress(comp_data)
-  end
-
-end
 
 class ArchiveManager
 
