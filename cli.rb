@@ -43,7 +43,7 @@ optparse = OptionParser.new do |opts|
   opts.on('-e', '--extract', 'Extract File. Can be combined with --file and/or --dest') do
     jobs << ['extract']
   end
-  opts.on('--snapshot-create', 'Snapshot Name') do |snapshot_name|
+  opts.on('--snapshot-create Snapshot Name') do |snapshot_name|
     jobs << ['snapshot-create', snapshot_name]
   end
   opts.on('--snapshot-rollback') do |snapshot_id|
