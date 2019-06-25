@@ -55,7 +55,7 @@ class ArFile
       $Log = log
     else
       $Log = Logging.logger(STDOUT)
-      $Log.level = :warn
+      $Log.level = :debug
     end
     $Log.info('Initializing ArFile')
     @metadata = MetadataManager.new(@path, read_only=false)

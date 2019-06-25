@@ -12,31 +12,31 @@ class FileManager
 
   attr_reader :path
 
-  class LittleLogger
+ # class LittleLogger
 
-    def info(msg)
-      puts("INFO: #{msg}")
-    end
+ #   def info(msg)
+ #     puts("INFO: #{msg}")
+ #   end
 
-    def error(msg)
-      puts("ERROR: #{msg}")
-    end
+ #   def error(msg)
+ #     puts("ERROR: #{msg}")
+ #   end
 
-    def fatal_error(msg)
-      puts("FATAL_ERROR: #{msg}")
-    end
+ #   def fatal_error(msg)
+ #     puts("FATAL_ERROR: #{msg}")
+ #   end
 
-    def debug(msg)
-      puts("DEBUG: #{msg}")
-    end
+ #   def debug(msg)
+ #     puts("DEBUG: #{msg}")
+ #   end
 
-  end
+ # end
 
   class FileManagerError < IOError
   end
 
   def initialize(path)
-    $Log = LittleLogger.new unless $Log
+    #$Log = LittleLogger.new unless $Log
     @path = File.absolute_path(path)
     $Log.debug("FM: INIT FILEMANAGER #{@path}")
     @readpos = 0
@@ -84,7 +84,7 @@ class FileManager
 
   def enable_write
     $Log.debug("FM: ENABLE WRITE #{path}")
-  return if ['w', 'r+', 'r+b'].include?(@mode)
+    return if ['w', 'r+', 'r+b'].include?(@mode)
     cur_pos = @filehandle.tell
     close
     open('r+')

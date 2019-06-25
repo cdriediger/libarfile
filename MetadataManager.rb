@@ -13,7 +13,7 @@ module MetadataEncoder
     #return MessagePack.unpack(metadata)
     return JSON.parse(metadata)
   end
-  
+
 end
 
 class MetadataManager < Hash
@@ -37,20 +37,26 @@ class MetadataManager < Hash
         return false
       end
       begin
-        @superblock_msp = fileobj.readline
+	superblock_data = fileobj.read(1000)
+	@superblock_msp = superblock_data.lines[0]
         $Log.debug("read superblock")
       rescue EOFError
         $Log.error("error while reading superblock")
         return false
       end
       $Log.debug('   Found potential Superblock')
+      $Log.debug("Length: #{@superblock_msp.length}")
       $Log.debug(@superblock_msp)
       begin
         $Log.debug("parsing superblock:")
         $Log.debug('------------------------------')
         $Log.debug(@superblock_msp[0..-3])
         $Log.debug('------------------------------')
-        @superblock = MetadataEncoder::decode(@superblock_msp[0..-3])
+	begin
+          @superblock = MetadataEncoder::decode(@superblock_msp[0..-3])
+	rescue JSON::ParserError
+	  return false
+	end
         $Log.debug('------------------------------')
         $Log.debug(@superblock)
         $Log.debug('------------------------------')
