@@ -102,23 +102,27 @@ class MetadataManager < Hash
     #end
     if self.empty?
       @new = true
+      init_new_metadata
     else
       @new = false
     end
-    self['FileHashes'] = Hash.new unless self.has_key?('FileHashes') # {MD5-Hash:FILE-ID}
-    self['PartHashes'] = Hash.new unless self.has_key?('PartHashes') # {MD5-Hash:CHUNK-ID}
-    self['Files'] = Hash.new unless self.has_key?('Files')
-    # {FILE-ID:{"Path":PATH,"md5":MD5-HASH,"dedup":bool,"container":containername,"Parts":{PART_ID:CHUNK-ID]}}}
-    #self['Chunks'] = Hash.new unless self.has_key?('Chunks')
-    # {CHUNK-ID => [start, length, written, [locking_snapshot_id1, locking_snapshot_idN]]}
-    self['EndOfArchive'] = 0   unless self.has_key?('EndOfArchive')
-    self['Snapshots'] = Hash.new unless self.has_key?('Snapshots') # {"created" => Time, "Metadata" => Metadata_json}
-    self['Snapshot_Names'] = Hash.new unless self.has_key?('Snapshot_Names')
-    self['Container'] = Hash.new unless self.has_key?('Container') # {'container_name' => [FILE-IDs]}
-    self['last_chunk_id'] = 0 unless self.has_key?('last_chunk_id')
+    self['PartHashes'] = Hash.new # {MD5-Hash:CHUNK-ID}
+    self['EndOfArchive'] = 0
     @final_metadata = self.clone
     @chunks = ChunkManager.new(self)
     @chunks.set_metadata_chunk(@superblock['Start'], superblock['Stop']) if @superblock.found?
+  end
+
+  def init_new_metadata
+    self['FileHashes'] = Hash.new # {MD5-Hash:FILE-ID}
+    self['Files'] = Hash.new
+    # {FILE-ID:{"Path":PATH,"md5":MD5-HASH,"dedup":bool,"container":containername,"Parts":{PART_ID:CHUNK-ID]}}}
+    # self['Chunks'] = Hash.new unless self.has_key?('Chunks')
+    # {CHUNK-ID => [start, length, written, [locking_snapshot_id1, locking_snapshot_idN]]}
+    self['Snapshots'] = Hash.new # {"created" => Time, "Metadata" => Metadata_json}
+    self['Snapshot_Names'] = Hash.new
+    self['Container'] = Hash.new # {'container_name' => [FILE-IDs]}
+    self['last_chunk_id'] = 0
   end
 
   def new?
