@@ -6,12 +6,12 @@ module MetadataEncoder
 
   def self::encode(metadata)
     #return metadata.to_msgpack
-	return JSON.generate(metadata)
+    return JSON.generate(metadata)
   end
   
   def self.decode(metadata)
     #return MessagePack.unpack(metadata)
-	return JSON.parse(metadata)
+    return JSON.parse(metadata)
   end
   
 end
@@ -33,7 +33,7 @@ class MetadataManager < Hash
       begin
         fileobj = File.open(path)
       rescue Errno::ENOENT
-		$Log.error("failed to open file #{path}")
+        $Log.error("failed to open file #{path}")
         return false
       end
       begin
@@ -46,12 +46,12 @@ class MetadataManager < Hash
       $Log.debug('   Found potential Superblock')
       $Log.debug(@superblock_msp)
       begin
-		$Log.debug("parsing superblock:")
+        $Log.debug("parsing superblock:")
         $Log.debug('------------------------------')
         $Log.debug(@superblock_msp[0..-3])
         $Log.debug('------------------------------')
         @superblock = MetadataEncoder::decode(@superblock_msp[0..-3])
-		$Log.debug('------------------------------')
+        $Log.debug('------------------------------')
         $Log.debug(@superblock)
         $Log.debug('------------------------------')
         self.merge!(@superblock)
@@ -113,7 +113,7 @@ class MetadataManager < Hash
     # {CHUNK-ID => [start, length, written, [locking_snapshot_id1, locking_snapshot_idN]]}
     self['EndOfArchive'] = 0   unless self.has_key?('EndOfArchive')
     self['Snapshots'] = Hash.new unless self.has_key?('Snapshots') # {"created" => Time, "Metadata" => Metadata_json}
-	self['Snapshot_Names'] = Hash.new unless self.has_key?('Snapshot_Names')
+    self['Snapshot_Names'] = Hash.new unless self.has_key?('Snapshot_Names')
     self['Container'] = Hash.new unless self.has_key?('Container') # {'container_name' => [FILE-IDs]}
     self['last_chunk_id'] = 0 unless self.has_key?('last_chunk_id')
     @final_metadata = self.clone
@@ -249,7 +249,7 @@ class MetadataManager < Hash
     @changed = true
     write_backup('create_snapshot', snapshot_id)
     self['Snapshots'][snapshot_id] = {'Name' => snapshot_name, 'Created' => time, 'Files' => files}
-	self['Snapshot_Names'][snapshot_name] = snapshot_id
+    self['Snapshot_Names'][snapshot_name] = snapshot_id
     @chunks.writtenChunks.each do |chunk_id|
       @chunks.lock_chunk(snapshot_id, chunk_id)
     end
@@ -369,8 +369,8 @@ class MetadataManager < Hash
       start, size = @chunks.get_chunk_by_id(chunk_id)
       length = start + size
       @superblock = MetadataEncoder::encode({'Hash' => metadata_hash,
-                      'Start' => start,
-                      'Stop' => length})
+                                             'Start' => start,
+                                             'Stop' => length})
       @superblock << %Q< \n>
       $Log.debug("MM: @superblock: #{superblock}")
       archive.write_part(@superblock, debup = false, is_superblock = true)

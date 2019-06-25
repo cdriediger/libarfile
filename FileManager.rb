@@ -38,7 +38,7 @@ class FileManager
   def initialize(path)
     $Log = LittleLogger.new unless $Log
     @path = File.absolute_path(path)
-  $Log.debug("FM: INIT FILEMANAGER #{@path}")
+    $Log.debug("FM: INIT FILEMANAGER #{@path}")
     @readpos = 0
     @writepos = 0
     @mode = 'r'
@@ -87,7 +87,7 @@ class FileManager
   return if ['w', 'r+', 'r+b'].include?(@mode)
     cur_pos = @filehandle.tell
     close
-	open('r+')
+    open('r+')
     @filehandle.seek(cur_pos)
   end
 
@@ -96,11 +96,11 @@ class FileManager
     @filehandle.seek(start)
     data = @filehandle.read(length)
     @readpos = @filehandle.tell
-  if data
+    if data
       $Log.debug("FM: READ #{data.length} Bytes from #{path}")
-  else
-    $Log.error("FM: READ: Reached end of file.")
-  end
+    else
+      $Log.error("FM: READ: Reached end of file.")
+    end
     return data
   end
 
@@ -128,12 +128,12 @@ class FileManager
     else
       @filehandle.seek(@writepos)
     end
-  $Log.debug("FM: Seeked to start: #{@filehandle.tell}")
-  start = @filehandle.tell
-  length = @filehandle.write(data)
-  $Log.debug("FM: BINMODE??: #{@filehandle.binmode?}")
-  @writepos = @filehandle.tell
-  $Log.debug("FM: SET writepos = #{@filehandle.tell}")
+    $Log.debug("FM: Seeked to start: #{@filehandle.tell}")
+    start = @filehandle.tell
+    length = @filehandle.write(data)
+    $Log.debug("FM: BINMODE??: #{@filehandle.binmode?}")
+    @writepos = @filehandle.tell
+    $Log.debug("FM: SET writepos = #{@filehandle.tell}")
     $Log.debug("FM: WROTE #{length} Bytes to #{path} starting at: #{start}")
     return length
   end
@@ -149,7 +149,7 @@ class FileManager
 
   def rename(new_path)
     $Log.debug("FM: RENAME #{path} to #{new_path}")
-  new_path = File.absolute_path(new_path)
+    new_path = File.absolute_path(new_path)
     close
     File.rename(@path, new_path)
     @path = new_path
