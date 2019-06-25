@@ -96,6 +96,26 @@ class ArfileFS < FuseFS::FuseDir
     @files.delete(path)
   end
 
+  def can_mkdir?(path)
+    return true
+  end
+
+  def mkdir(path)
+    @dirs << path
+  end
+
+  def can_rmdir?(path)
+    return true
+  end
+
+  def rmdir(path)
+    @files.each do |file_path, file_id|
+      delete(file_path) if file_path.start_with?(path)
+    end
+    @dirs.delete(path)
+  end
+
+
 end
 
 # Usage: #{$0} mountpoint [mount_options]
